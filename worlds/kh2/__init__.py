@@ -113,7 +113,11 @@ class KH2World(World):
                 "AutoFormLogic",
                 "LevelDepth",
                 "DonaldGoofyStatsanity",
-                "CorSkipToggle"
+                "CorSkipToggle",
+                "SuperBosses",
+                "Cups",
+                "AtlanticaToggle",
+                "SummonLevelLocationToggle",
         )
         slot_data.update({
             "hitlist":                [],  # remove this after next update
@@ -180,6 +184,8 @@ class KH2World(World):
                 if self.visitlocking_dict[item] == 0:
                     self.visitlocking_dict.pop(item)
                 self.multiworld.push_precollected(self.create_item(item))
+            # tt is 3 visits so 2nd visit locking unlocks only the third visit
+            self.multiworld.push_precollected(self.create_item(ItemName.IceCream))
 
         for _ in range(self.options.RandomVisitLockingItem.value):
             if sum(self.visitlocking_dict.values()) <= 0:
@@ -249,6 +255,8 @@ class KH2World(World):
         # hitlist
         if self.options.Goal not in ["lucky_emblem_hunt", "three_proofs"]:
             self.random_super_boss_list.extend(exclusion_table["Hitlist"])
+            if self.options.CasualBounties:
+                self.random_super_boss_list.extend(exclusion_table["HitlistCasual"])
             self.bounties_amount = self.options.BountyAmount.value
             self.bounties_required = self.options.BountyRequired.value
 
@@ -467,9 +475,10 @@ class KH2World(World):
             logging.info(
                     f"Lucky Emblem Amount {self.options.LuckyEmblemsAmount.value} is less than required "
                     f"{self.options.LuckyEmblemsRequired.value} for player {self.multiworld.get_file_safe_player_name(self.player)}."
-                    f" Setting amount to {self.options.LuckyEmblemsRequired.value}")
-            luckyemblemamount = max(self.lucky_emblem_amount, self.lucky_emblem_required)
-            self.options.LuckyEmblemsAmount.value = luckyemblemamount
+                    f" Swapping {self.options.LuckyEmblemsRequired.value} and {self.options.LuckyEmblemsAmount.value}")
+            temp = self.options.LuckyEmblemsAmount.value
+            self.options.LuckyEmblemsAmount.value = self.options.LuckyEmblemsRequired.value
+            self.options.LuckyEmblemsRequired.value = temp
 
         self.item_quantity_dict[ItemName.LuckyEmblem] = self.options.LuckyEmblemsAmount.value
         # give this proof to unlock the final door once the player has the amount of lucky emblem required
@@ -483,6 +492,20 @@ class KH2World(World):
         for location in self.options.exclude_locations.value:
             if location in self.random_super_boss_list:
                 self.random_super_boss_list.remove(location)
+
+        if self.options.LevelDepth == "level_1":
+            if LocationName.Lvl50 in self.random_super_boss_list:
+                self.random_super_boss_list.remove(LocationName.Lvl50)
+            if LocationName.Lvl99 in self.random_super_boss_list:
+                self.random_super_boss_list.remove(LocationName.Lvl99)
+
+        # We only want the bounty corresponding to our max level, remove the other level bounty
+        if self.options.LevelDepth in ["level_50", "level_50_sanity"] and LocationName.Lvl99 in self.random_super_boss_list:
+            self.random_super_boss_list.remove(LocationName.Lvl99)
+
+        # We only want the bounty corresponding to our max level, remove the other level bounty
+        if self.options.LevelDepth in ["level_99", "level_99_sanity"] and LocationName.Lvl50 in self.random_super_boss_list:
+            self.random_super_boss_list.remove(LocationName.Lvl50)
 
         if not self.options.SummonLevelLocationToggle and LocationName.Summonlvl7 in self.random_super_boss_list:
             self.random_super_boss_list.remove(LocationName.Summonlvl7)
